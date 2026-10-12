@@ -65,6 +65,7 @@ type App struct {
 	onDragEnter        func(paths []string, x, y float64) // OS file drag entered the window
 	onDragMove         func(x, y float64)                 // OS file drag moved over the window
 	onDragLeave        func()                             // OS file drag left without dropping
+	onNativeKey        func(NativeKeyEvent)
 	hitTestCallback    gpucontext.HitTestCallback
 
 	// State
@@ -819,7 +820,7 @@ func (a *App) processEventsMultiThread() {
 
 	// Handle secondary window resize events.
 	for i := range secondaryResizes {
-		a.handleSecondaryResize(secondaryResizes[i])
+		a.handleSecondaryResize(&secondaryResizes[i])
 	}
 
 	// Dispatch end-of-frame events (gestures computed from pointer events)
@@ -829,7 +830,7 @@ func (a *App) processEventsMultiThread() {
 }
 
 // handleSecondaryResize resizes a secondary window's surface on the render thread.
-func (a *App) handleSecondaryResize(ev platform.Event) {
+func (a *App) handleSecondaryResize(ev *platform.Event) {
 	w := a.windowManager.getByPlatformID(ev.WindowID)
 	if w == nil || w.surface == nil {
 		return
@@ -896,6 +897,8 @@ func (a *App) classifyEvent(event *platform.Event, lastResize *platform.Event, s
 	case platform.EventChar:
 		a.dispatchCharEvent(event)
 		a.inputEvents = append(a.inputEvents, gpucontext.CharEvent{Char: event.Char})
+	case platform.EventNativeKey:
+		a.dispatchNativeKey(event)
 	case platform.EventPointerDown, platform.EventPointerUp, platform.EventPointerMove,
 		platform.EventPointerEnter, platform.EventPointerLeave:
 		a.dispatchPointerEvent(event)
@@ -937,6 +940,7 @@ func (a *App) dispatchDragEvent(event *platform.Event) {
 
 // dispatchKeyEvent handles EventKeyDown and EventKeyUp from the platform.
 func (a *App) dispatchKeyEvent(event *platform.Event, pressed bool) {
+	a.dispatchNativeKey(event)
 	w := a.windowManager.getByPlatformID(event.WindowID)
 	a.dispatchKeyToWindow(w, event.Key, event.Mods, pressed)
 	a.dispatchKeyToEventSource(event.Key, event.Mods, pressed)
@@ -978,6 +982,7 @@ func (a *App) dispatchKeyToInputState(key gpucontext.Key, pressed bool) {
 
 // dispatchCharEvent handles EventChar from the platform.
 func (a *App) dispatchCharEvent(event *platform.Event) {
+	a.dispatchNativeKey(event)
 	w := a.windowManager.getByPlatformID(event.WindowID)
 	if w != nil && w.onTextInput != nil {
 		w.onTextInput(string(event.Char))
