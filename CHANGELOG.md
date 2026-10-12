@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **macOS: wrong scale after moving a window between displays** — `CAMetalLayer.contentsScale` was set only when the surface was created and shown, while the render thread reconfigured the drawable to the new physical size. A window moved from a 1× to a 2× display was drawn magnified and cropped; from 2× to 1× it filled only the top-left quarter. `PrepareFrame` now updates `contentsScale` on the render thread when the backing scale changes, right before the drawable is reconfigured. The `WaitEvents` path (`checkResize`) now also emits `EventScaleChanged`, sharing its size/scale detection with `pollEvents`.
+
 ## [0.53.0] - 2026-08-13
 
 ### Added
